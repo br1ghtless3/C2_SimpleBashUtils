@@ -1,6 +1,5 @@
 #include "s21_cat.h"
 
-// Длинные опции GNU
 struct option const options_GNU[] = {
     {"number-nonblank", no_argument, NULL, 'b'},
     {"show-ends", no_argument, NULL, 'E'},
@@ -11,9 +10,6 @@ struct option const options_GNU[] = {
     {NULL, 0, NULL, 0},
 };
 
-// --- 1. Вспомогательные функции для печати символов ---
-
-// Утилитарная функция: печатает непечатаемые символы (кроме \n и \t).
 int print_non_printable(int current_char) {
   int processed = 0;
 
@@ -37,52 +33,42 @@ int print_non_printable(int current_char) {
   return processed;
 }
 
-// Печатает символ, применяя флаги -e, -t, -v.
 void print_char_with_flags(int current_char, const cat_options_t *options) {
   int is_tab = (current_char == '\t');
   int is_newline = (current_char == '\n');
   int is_printed = 0;
 
-  // 1. Обработка -e (показывает $ в конце строки)
   if (options->e_flag && is_newline) {
     printf("$");
   }
 
-  // 2. Обработка -t (показывает ^I вместо \t)
   if (options->t_flag && is_tab) {
     printf("^I");
     is_printed = 1;
   }
 
-  // 3. Обработка -v (показывает непечатаемые символы)
   if (options->v_flag && !is_tab && !is_newline && !is_printed) {
     if (print_non_printable(current_char) == 1) {
       is_printed = 1;
     }
   }
 
-  // 4. Печать символа, если он не был обработан флагами -t или -v.
   if (!is_printed) {
     printf("%c", current_char);
   }
 }
 
-// --- 2. Вспомогательные функции для нумерации и состояния ---
-
-// Инициализация структуры состояния.
 void init_state(cat_state_t *state) {
   state->line_number = 1;
   state->empty_lines_count = 0;
   state->last_char = '\n';
 }
 
-// Обрабатывает логику нумерации и сжатия в начале строки.
 int handle_line_start(int current_char, const cat_options_t *options,
                       cat_state_t *state) {
   int skip_line = 0;
 
   if (state->last_char == '\n') {
-    // Логика сжатия (-s)
     if (options->s_flag && current_char == '\n') {
       state->empty_lines_count++;
       if (state->empty_lines_count > 1) {
@@ -92,7 +78,6 @@ int handle_line_start(int current_char, const cat_options_t *options,
       state->empty_lines_count = 0;
     }
 
-    // Логика нумерации (-n, -b)
     if (skip_line == 0) {
       if (options->n_flag) {
         printf("%6d\t", state->line_number);
@@ -107,9 +92,6 @@ int handle_line_start(int current_char, const cat_options_t *options,
   return skip_line;
 }
 
-// --- 3. Основные функции обработки ---
-
-// Главный цикл чтения и печати символов.
 void read_and_print_loop(FILE *file, const cat_options_t *options,
                          cat_state_t *state) {
   int current_char;
@@ -130,7 +112,6 @@ void read_and_print_loop(FILE *file, const cat_options_t *options,
   }
 }
 
-// Обработка одного файла с передачей состояния
 int process_single_file(const char *filename, const cat_options_t *options,
                         cat_state_t *state) {
   FILE *file = NULL;
@@ -156,7 +137,6 @@ int process_single_file(const char *filename, const cat_options_t *options,
   return error;
 }
 
-// Парсинг аргументов командной строки и флагов.
 int parse_arguments(int argc, char *argv[], cat_options_t *options) {
   int optchar;
   const char *optstring = "benstvET";
@@ -207,8 +187,6 @@ int parse_arguments(int argc, char *argv[], cat_options_t *options) {
   return error;
 }
 
-// --- 4. Главная функция ---
-
 int main(int argc, char **argv) {
   cat_options_t options = {0};
   cat_state_t state;
@@ -220,10 +198,8 @@ int main(int argc, char **argv) {
     init_state(&state);
 
     if (optind == argc) {
-      // Обработка stdin
       error_n = process_single_file(NULL, &options, &state);
     } else {
-      // Обработка файлов с сохранением состояния между ними
       for (int i = optind; i < argc && error_n == 0; i++) {
         error_n = process_single_file(argv[i], &options, &state);
       }
